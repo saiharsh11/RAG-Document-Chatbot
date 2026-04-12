@@ -56,6 +56,57 @@ antigravity4/
 
 ---
 
+## Local Setup
+
+### Prerequisites
+- Python 3.10+
+- Node 18+
+- Groq API key → [console.groq.com](https://console.groq.com)
+- OpenRouter API key → [openrouter.ai/keys](https://openrouter.ai/keys)
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/saiharsh11/RAG-Document-Chatbot.git
+cd RAG-Document-Chatbot
+```
+
+### 2. Backend
+```bash
+cd backend
+python -m venv ../venv
+
+# Windows
+../venv/Scripts/activate
+
+# Mac/Linux
+source ../venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Create `backend/.env`:
+```
+GROQ_API_KEY=your_groq_key
+OPENROUTER_API_KEY=your_openrouter_key
+```
+
+Start the backend:
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+### 3. Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. Open the app
+Go to `http://localhost:5173`
+
+---
+
 ## How RAG Works
 
 **RAG = Retrieval-Augmented Generation**
