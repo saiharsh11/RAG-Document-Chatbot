@@ -1,0 +1,18 @@
+# Environment variables (never commit these)
+.env
+*.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Chroma DB (local vector store)
+backend/chroma_db/
+
+# Uploaded files
+backend/uploads/
+
+# Node
+frontend/node_modules/
+frontend/dist/
