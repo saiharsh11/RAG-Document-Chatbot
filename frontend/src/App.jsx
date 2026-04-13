@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import ModelSelector from "./components/ModelSelector";
 import FileUpload from "./components/FileUpload";
 import ChatWindow from "./components/ChatWindow";
+import API_URL from "./config";
 
 export default function App() {
   const [models, setModels] = useState([]);
@@ -9,7 +10,7 @@ export default function App() {
   const [documentName, setDocumentName] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:8000/models")
+    fetch(`${API_URL}/models`)
       .then((r) => r.json())
       .then((data) => {
         setModels(data.models);
