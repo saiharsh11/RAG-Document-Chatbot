@@ -2,6 +2,8 @@
 
 A full-stack AI chatbot that lets you upload PDF documents and chat with them using Retrieval-Augmented Generation (RAG) and LangChain Agents.
 
+**Live Demo:** [https://rag-document-chatbot.vercel.app](https://rag-document-chatbot.vercel.app)
+
 ---
 
 ## What This Project Does
@@ -22,7 +24,8 @@ A full-stack AI chatbot that lets you upload PDF documents and chat with them us
 | **AI Framework** | LangChain + LangGraph |
 | **Agent Pattern** | ReAct (Reason + Act) via LangGraph |
 | **Vector Database** | ChromaDB (local) |
-| **Embeddings** | HuggingFace `all-MiniLM-L6-v2` (runs locally, free) |
+| **Embeddings** | HuggingFace Inference API `all-MiniLM-L6-v2` |
+| **Deployment** | Railway (backend) + Vercel (frontend) |
 | **Backend** | FastAPI + Uvicorn |
 | **Frontend** | React + Vite + Tailwind CSS |
 | **PDF Parsing** | PyPDF |
@@ -63,6 +66,7 @@ antigravity4/
 - Node 18+
 - Groq API key → [console.groq.com](https://console.groq.com)
 - OpenRouter API key → [openrouter.ai/keys](https://openrouter.ai/keys)
+- HuggingFace API token → [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
 
 ### 1. Clone the repo
 ```bash
@@ -88,6 +92,7 @@ Create `backend/.env`:
 ```
 GROQ_API_KEY=your_groq_key
 OPENROUTER_API_KEY=your_openrouter_key
+HF_API_KEY=your_huggingface_token
 ```
 
 Start the backend:
