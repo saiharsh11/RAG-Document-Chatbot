@@ -1,14 +1,14 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_community.vectorstores import Chroma
 
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
 
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=os.getenv("HF_API_KEY"),
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
+embeddings = HuggingFaceEndpointEmbeddings(
+    model="sentence-transformers/all-MiniLM-L6-v2",
+    huggingfacehub_api_token=os.getenv("HF_API_KEY"),
 )
 
 

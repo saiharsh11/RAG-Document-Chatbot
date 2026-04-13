@@ -6,6 +6,7 @@ langchain-openai
 langchain-groq
 chromadb
 langchain-text-splitters
+langchain-huggingface
 pypdf
 python-multipart
 python-dotenv
