@@ -5,7 +5,7 @@ langchain-community
 langchain-openai
 langchain-groq
 chromadb
-sentence-transformers
+langchain-text-splitters
 pypdf
 python-multipart
 python-dotenv
