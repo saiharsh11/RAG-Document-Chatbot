@@ -1,12 +1,15 @@
 import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_community.vectorstores import Chroma
 
 CHROMA_DIR = os.path.join(os.path.dirname(__file__), "chroma_db")
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = HuggingFaceInferenceAPIEmbeddings(
+    api_key=os.getenv("HF_API_KEY"),
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+)
 
 
 def ingest_pdf(file_path: str, collection_name: str):
