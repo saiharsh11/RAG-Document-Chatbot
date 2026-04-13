@@ -12,7 +12,7 @@ from skills.document_tools import build_skills
 from rag import get_retriever
 
 OPENROUTER_MODELS = [
-    "z-ai/glm-4.5-air:free",
+    "minimax/minimax-m2.5:free",
 ]
 
 GROQ_MODELS = [
