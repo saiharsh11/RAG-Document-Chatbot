@@ -12,7 +12,7 @@ from skills.document_tools import build_skills
 from rag import get_retriever
 
 OPENROUTER_MODELS = [
-    "openai/gpt-oss-120b:free",
+    "google/gemma-4-31b-it:free",
 ]
 
 GROQ_MODELS = [
