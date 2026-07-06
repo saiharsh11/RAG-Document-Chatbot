@@ -2,7 +2,6 @@ fastapi
 uvicorn
 langchain
 langchain-community
-langchain-openai
 langchain-groq
 chromadb
 langchain-text-splitters

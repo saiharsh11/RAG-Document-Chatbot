@@ -6,38 +6,23 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from langchain_groq import ChatGroq
 from skills.document_tools import build_skills
 from rag import get_retriever
 
-OPENROUTER_MODELS = [
-    "openai/gpt-oss-120b:free",
-]
-
 GROQ_MODELS = [
+    "openai/gpt-oss-120b",
+    "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
 ]
 
-ALL_MODELS = (
-    [{"id": m, "provider": "openrouter"} for m in OPENROUTER_MODELS]
-    + [{"id": m, "provider": "groq"} for m in GROQ_MODELS]
-)
+ALL_MODELS = [{"id": m, "provider": "groq"} for m in GROQ_MODELS]
 
 
 def get_llm(model_id: str):
-    provider = next((m["provider"] for m in ALL_MODELS if m["id"] == model_id), None)
-
-    if provider == "groq":
-        return ChatGroq(
-            model=model_id,
-            api_key=os.getenv("GROQ_API_KEY"),
-            temperature=0,
-        )
-    return ChatOpenAI(
+    return ChatGroq(
         model=model_id,
-        api_key=os.getenv("OPENROUTER_API_KEY"),
-        base_url="https://openrouter.ai/api/v1",
+        api_key=os.getenv("GROQ_API_KEY"),
         temperature=0,
     )
 
