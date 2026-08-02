@@ -6,3 +6,64 @@ body {
   color: #f1f1f1;
   font-family: system-ui, sans-serif;
 }
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* Scoped theme for the landing page: deep ink + violet, matches the chat app's palette */
+.theme-rag {
+  --background: oklch(0.16 0.015 285);
+  --foreground: oklch(0.97 0.005 285);
+  --card: oklch(0.2 0.02 285);
+  --card-foreground: oklch(0.97 0.005 285);
+  --primary: oklch(0.62 0.19 285);
+  --primary-foreground: oklch(0.99 0.005 285);
+  --secondary: oklch(0.24 0.02 285);
+  --secondary-foreground: oklch(0.97 0.005 285);
+  --muted: oklch(0.24 0.02 285);
+  --muted-foreground: oklch(0.68 0.02 285);
+  --accent: oklch(0.72 0.15 200);
+  --accent-foreground: oklch(0.16 0.015 285);
+  --border: oklch(0.28 0.02 285);
+  --input: oklch(0.28 0.02 285);
+  --ring: oklch(0.62 0.19 285);
+
+  --gradient-rag: linear-gradient(135deg, oklch(0.62 0.19 285), oklch(0.72 0.15 200));
+  --glow-rag: 0 0 80px -20px oklch(0.62 0.19 285 / 0.7);
+  --shadow-rag: 0 24px 60px -30px oklch(0.05 0 0 / 0.9);
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.theme-rag h1,
+.theme-rag h2,
+.theme-rag h3,
+.theme-rag h4,
+.theme-rag h5,
+.theme-rag h6 {
+  letter-spacing: -0.02em;
+}
+
+.rag-grid {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+}
