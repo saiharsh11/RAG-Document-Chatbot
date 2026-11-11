@@ -101,7 +101,7 @@ class Settings:
     tts_voice: str = _env("TTS_VOICE", "autumn")
 
     # HTTP
-    allowed_origins: tuple = tuple(o for o in _env("ALLOWED_ORIGINS", "*").split(",") if o)
+    allowed_origins: tuple = tuple(o.strip().rstrip("/") for o in _env("ALLOWED_ORIGINS", "*").split(",") if o.strip())  # browsers send origins without a trailing slash
     rate_limit_per_minute: int = _int("RATE_LIMIT_PER_MINUTE", 30)
 
 
