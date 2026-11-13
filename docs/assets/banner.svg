@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-label="RAG Document Assistant: every answer, footnoted">
+  <defs>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="11" cy="11" r="1.1" fill="#efe9df" fill-opacity=".09"/>
+    </pattern>
+    <pattern id="dotsLit" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="11" cy="11" r="1.4" fill="#ff6b2c" fill-opacity=".55"/>
+    </pattern>
+    <linearGradient id="band" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="sweep">
+      <rect class="band" x="-260" y="-200" width="260" height="820" fill="url(#band)" transform="rotate(18)"/>
+    </mask>
+    <radialGradient id="glow" cx=".78" cy=".45" r=".55">
+      <stop offset="0" stop-color="#ff6b2c" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#ff6b2c" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .band { animation: sweep 7s cubic-bezier(.4,0,.2,1) infinite; }
+      @keyframes sweep { 0% { transform: rotate(18deg) translateX(0); } 70%, 100% { transform: rotate(18deg) translateX(1900px); } }
+      .draw { stroke-dasharray: 120; stroke-dashoffset: 120; animation: draw 6s ease-in-out infinite; }
+      .d2 { animation-delay: .35s; } .d3 { animation-delay: .7s; } .d4 { animation-delay: 1.05s; }
+      @keyframes draw { 0% { stroke-dashoffset: 120; } 30%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 120; } }
+      .rise { opacity: 0; animation: rise 1.4s cubic-bezier(.2,.7,.1,1) .2s forwards; }
+      .rise2 { animation-delay: .5s; } .rise3 { animation-delay: .8s; }
+      @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+      .serif { font-family: Georgia, 'Times New Roman', serif; }
+      .mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; letter-spacing: .14em; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="420" rx="22" fill="#0c0b0a"/>
+  <rect width="1280" height="420" rx="22" fill="url(#glow)"/>
+  <rect width="1280" height="420" rx="22" fill="url(#dots)"/>
+  <rect width="1280" height="420" rx="22" fill="url(#dotsLit)" mask="url(#sweep)"/>
+
+  <!-- the app's logo, drawing itself -->
+  <g transform="translate(940 92) scale(7.2)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect class="draw" x="1" y="1" width="18" height="24" rx="2.5" stroke="#efe9df" stroke-width=".9"/>
+    <path class="draw d2" d="M5 7h10M5 11h10M5 15h6" stroke="#efe9df" stroke-width=".9"/>
+    <path class="draw d3" d="M22 9v16a3 3 0 0 1-3 3H7" stroke="#ff6b2c" stroke-width="1.1"/>
+  </g>
+
+  <g transform="translate(72 0)">
+    <text class="mono rise" x="0" y="118" font-size="15" fill="#8d877d">PRIVATE · MULTI-AGENT · DOCUMENT INTELLIGENCE</text>
+    <text class="serif rise rise2" x="-4" y="200" font-size="68" fill="#efe9df" letter-spacing="-1.5">RAG Document Assistant</text>
+    <text class="serif rise rise2" x="0" y="262" font-size="40" fill="#efe9df" letter-spacing="-.5">Every answer, <tspan font-style="italic" fill="#ff6b2c">footnoted.</tspan></text>
+    <text class="mono rise rise3" x="0" y="330" font-size="13.5" fill="#8d877d">AGENTS OVER MCP + A2A  ·  HYBRID RETRIEVAL  ·  CITED ANSWERS  ·  NOTHING STORED</text>
+  </g>
+</svg>
