@@ -109,3 +109,35 @@ def test_graph_routing():
     assert after_write({"route": "research", "mode": "auto"}) == "verify"
     assert after_verify({"verdict": {"verdict": "revise"}, "rounds": 1, "focus": ["q"]}) == "research"
     assert after_verify({"verdict": {"verdict": "revise"}, "rounds": 2}) == "finalize"  # bounded loop
+
+
+def test_extend_adds_five_minutes_and_wipe_clears_studio():
+    from fastapi.testclient import TestClient
+    from app.api import app
+    from app.config import settings
+    from app.session import store
+
+    c = TestClient(app)
+    sid = c.post("/sessions").json()["session_id"]
+    s = store.peek(sid)
+    s.last_seen = time.time() - settings.session_ttl_seconds + 50       # 50 s left
+    left = c.post(f"/sessions/{sid}/extend").json()["expires_in"]
+    assert 345 <= left <= 350                                            # 50 s + 5 min
+    assert c.post(f"/sessions/{sid}/extend").json()["expires_in"] <= settings.session_ttl_seconds  # capped
+    s.studio["quiz"] = {"result": {"title": "t"}}
+    assert c.get(f"/sessions/{sid}/studio").json()["items"]["quiz"]["result"]["title"] == "t"
+    c.delete(f"/sessions/{sid}")
+    assert not s.studio and store.peek(sid) is None                       # wiped with the session
+
+
+
+def test_session_recall_finds_older_related_turns_only():
+    from app.session import recall
+    rng = np.random.default_rng(1)
+    def unit(v): return v / np.linalg.norm(v)
+    topic = unit(rng.normal(size=384))
+    mem = [{"turn": 0, "question": "remote days?", "answer": "3", "vec": unit(topic + 0.2 * unit(rng.normal(size=384)))}]
+    mem += [{"turn": 2 * i, "question": f"other {i}", "answer": "x", "vec": unit(rng.normal(size=384))} for i in range(1, 8)]
+    got = recall(mem, topic, n_turns=16)
+    assert [m["question"] for m in got] == ["remote days?"]          # the related early turn, not random ones
+    assert recall(mem, topic, n_turns=4) == []                        # still in the recent window: nothing to recall

@@ -9,6 +9,8 @@ const ACTORS = {
   Guardian: { kind: "guardrail", note: "Prompt Guard + rules" },
   Retriever: { kind: "pipeline", note: "hybrid search, no LLM" },
   Writer: { kind: "llm", note: "single generation call" },
+  "Rate limit": { kind: "pipeline", note: "waiting for free-tier quota" },
+  Memory: { kind: "pipeline", note: "session recall, local embeddings" },
 };
 
 const fmt = (ms) => (ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`);

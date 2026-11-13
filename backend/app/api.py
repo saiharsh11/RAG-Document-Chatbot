@@ -115,6 +115,17 @@ def get_session(sid: str):
             "turns": len(s.history), "wiki": s.wiki.status}
 
 
+@app.post("/sessions/{sid}/extend")
+def extend_session(sid: str):
+    """Add 5 minutes to the time left (asked for by the browser's one-minute warning), capped at the full TTL."""
+    s = store.peek(sid)
+    if not s:
+        raise HTTPException(404, "Session not found or expired. Start a new session.")
+    left = min(s.expires_in() + 300, settings.session_ttl_seconds)
+    s.last_seen = time.time() - settings.session_ttl_seconds + left
+    return {"session_id": s.id, "expires_in": s.expires_in()}
+
+
 @app.delete("/sessions/{sid}")
 def end_session(sid: str):
     return {"wiped": store.delete(sid)}
@@ -195,6 +206,7 @@ async def chat(sid: str, body: ChatIn, request: Request):
     runs.add(run)
 
     async def work():
+        run.watch_quota()
         try:
             if key in s.cache:
                 cached = s.cache[key]
@@ -217,11 +229,14 @@ async def chat(sid: str, body: ChatIn, request: Request):
                     s.cache[key] = result
             s.history.append(Turn("user", body.message.strip()))
             s.history.append(Turn("assistant", result["answer"], {"citations": result["citations"], "route": result["route"]}))
+            if result.get("route") not in ("blocked", "clarify"):    # session memory: embed the exchange locally
+                q, a = body.message.strip(), result["answer"]
+                vec = (await models.embed([f"{q}\n{a[:600]}"]))[0]
+                s.memory.append({"turn": len(s.history) - 2, "question": q[:300], "answer": a[:500], "vec": vec})
             run.emit("final", **result, usage=run.usage.as_dict(),
                      latency_ms=int((time.perf_counter() - run.started) * 1000))
         except LLMUnavailable as e:
-            run.emit("error", message="All models are busy right now (free-tier limits). Please try again in a minute.",
-                     detail=str(e)[:300])
+            run.emit("error", message=llm_error_message(str(e)), detail=str(e)[:300])
         except Exception as e:
             log.exception("chat failed")
             run.emit("error", message=f"Something went wrong ({type(e).__name__}).")
@@ -267,12 +282,13 @@ async def build_wiki(sid: str, request: Request):
     runs.add(run)
 
     async def work():
+        run.watch_quota()
         try:
             run.step("Orchestrator", "delegated", "→ Librarian over A2A")
             out = await request.app.state.a2a.send("librarian", {"run_id": run.id})
             if out.get("error"):
                 s.wiki.status = "error"
-                run.emit("error", message="The wiki could not be built right now. Please try again shortly.",
+                run.emit("error", message=llm_error_message(out["error"], "The wiki could not be built right now. Please try again shortly."),
                          detail=out["error"][:300])
             else:
                 run.emit("final", **out, graph=s.wiki.graph(s.docs), usage=run.usage.as_dict(),
@@ -340,13 +356,15 @@ async def studio(sid: str, body: StudioIn, request: Request):
     runs.add(run)
 
     async def work():
+        run.watch_quota()
         try:
             run.step("Orchestrator", "delegated", f"→ Librarian over A2A (studio: {body.kind})")
             out = await request.app.state.a2a.send("librarian", {"run_id": run.id, "skill": "studio",
                                                                 "kind": body.kind, "topic": body.topic})
             if out.get("error"):
-                run.emit("error", message="Couldn't create that right now. Please try again shortly.", detail=out["error"][:300])
+                run.emit("error", message=llm_error_message(out["error"], "Couldn't create that right now. Please try again shortly."), detail=out["error"][:300])
             else:
+                s.studio[body.kind] = {"result": out, "steps": run.steps, "topic": body.topic}   # kept for the session
                 run.emit("final", result=out, usage=run.usage.as_dict(),
                          latency_ms=int((time.perf_counter() - run.started) * 1000))
         finally:
@@ -365,6 +383,12 @@ async def studio(sid: str, body: StudioIn, request: Request):
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
+@app.get("/sessions/{sid}/studio")
+def studio_items(sid: str):
+    """Studio items already made in this session, so switching views never loses them."""
+    return {"items": _session(sid).studio}
+
+
 # ── voice ───────────────────────────────────────────────────────────────────
 @app.post("/sessions/{sid}/transcribe")
 async def transcribe(sid: str, audio: UploadFile = File(...)):
@@ -377,6 +401,14 @@ async def transcribe(sid: str, audio: UploadFile = File(...)):
     except LLMUnavailable as e:
         raise HTTPException(503, str(e))
     return {"text": text}
+
+
+def llm_error_message(detail: str, busy: str = "All models are busy right now (free-tier limits). Please try again in a minute.") -> str:
+    """Tell users the truth: a rejected API key is a server setup problem, not a busy model."""
+    d = (detail or "").lower()
+    if "401" in d or "invalid api key" in d or "no models configured" in d:
+        return "The AI service isn't configured correctly on the server (its API key was rejected). Please try again later."
+    return busy
 
 
 class SpeakIn(BaseModel):

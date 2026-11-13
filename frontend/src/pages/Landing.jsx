@@ -11,9 +11,12 @@ import WikiGraph from "../components/landing/WikiGraph.jsx";
 import AgentGraph from "../components/landing/AgentGraph.jsx";
 import { Magnetic, Tilt } from "../components/landing/fx.jsx";
 import { useReveal, useSpotlight } from "../components/landing/useFx.js";
+import DotShape from "../components/DotShape.jsx";
+import DotField from "../components/DotField.jsx";
 import "./landing.css";
 
 const REPO = "https://github.com/saiharsh11/RAG-Document-Chatbot";
+const LOGO_REVEAL = ["scatter", "mark"];   // loose specks assemble into the logo as the closing scrolls in
 
 /* ─── Content ──────────────────────────────────────────────────────────── */
 
@@ -181,11 +184,11 @@ function WikiSection() {
                 <aside className="lw-side">
                   <div className="lw-search"><Search size={13} /> Search pages</div>
                   <Tree name="sources">
-                    {["attention-paper.pdf", "rag-survey.pdf", "lecture-notes.docx"].map((f) => <div key={f} className="lw-file"><FileText size={13} /> {f}</div>)}
+                    {["attention-paper.pdf", "rag-survey.pdf", "lecture-notes.md"].map((f) => <div key={f} className="lw-file"><FileText size={13} /> {f}</div>)}
                   </Tree>
                   <Tree name="wiki">
                     <Tree name="concepts">{["Self-attention", "Dense retrieval", "Reranking", "Embeddings"].map((f) => <div key={f} className={`lw-file ${focus === f ? "is-on" : ""}`}>{f}</div>)}</Tree>
-                    <Tree name="entities" open={false}><div className="lw-file">Transformer</div></Tree>
+                    <Tree name="saved answers" open={false}><div className="lw-file">Where do the papers disagree?</div></Tree>
                     <Tree name="contradictions"><div className={`lw-file lw-contra ${focus === "Hallucination" ? "is-on" : ""}`}>Hallucination rates</div></Tree>
                   </Tree>
                 </aside>
@@ -367,6 +370,7 @@ function Closing() {
     <section className="mg-close">
       <div className="mg-close-top">
       <EraseField className="mg-close-field" />
+      <div className="mg-close-logo" aria-hidden="true"><DotShape mode="reveal" order={LOGO_REVEAL} /></div>
       <div className="mg-wrap mg-close-inner">
         <span className="mg-hint mg-hint-left">Move your cursor over the page to make it forget</span>
         <h2 className="mg-reveal">You ask. It answers. <em>Then it forgets.</em></h2>
@@ -395,6 +399,7 @@ export default function Landing() {
   useSpotlight(root);
   return (
     <div className="mg" ref={root}>
+      <DotField className="mg-bgfx" />
       <Nav />
       <main>
         <Hero />

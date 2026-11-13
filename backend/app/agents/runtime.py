@@ -37,6 +37,12 @@ class Run:
     def step(self, agent: str, action: str, detail: str = "", **extra: Any) -> None:
         self.emit("step", agent=agent, action=action, detail=detail[:240], **extra)
 
+    def watch_quota(self) -> None:
+        """Report free-tier quota waits for this request in its agent trail."""
+        from app.llm.client import on_quota_wait
+        on_quota_wait.set(lambda s: self.step("Rate limit", "waiting",
+                                              f"free-tier limit reached, retrying in {s:.0f}s"))
+
 
 class RunRegistry:
     """Lets A2A agent executors find the run a delegated task belongs to."""

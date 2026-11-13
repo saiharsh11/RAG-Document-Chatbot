@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import re
+
+import numpy as np
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -132,6 +134,18 @@ class Turn:
     at: float = field(default_factory=time.time)
 
 
+def recall(memory: list[dict], qvec, n_turns: int, recent: int = 6, k: int = 2, min_sim: float = 0.55) -> list[dict]:
+    """Session memory: the earlier exchanges most related to a new question. The last `recent`
+    messages are already given to the models word for word, so only older exchanges are searched.
+    Vectors are normalised, so the dot product is cosine similarity."""
+    older = [m for m in memory if m["turn"] < n_turns - recent]
+    if not older:
+        return []
+    sims = np.array([m["vec"] for m in older]) @ qvec
+    best = sorted(range(len(older)), key=lambda i: -sims[i])[:k]
+    return [older[i] | {"sim": float(sims[i])} for i in sorted(best, key=lambda i: older[i]["turn"]) if sims[i] >= min_sim]
+
+
 class Session:
     def __init__(self) -> None:
         self.id = secrets.token_urlsafe(18)
@@ -142,6 +156,8 @@ class Session:
         self.history: list[Turn] = []
         self.wiki = Wiki()
         self.cache: dict[str, dict] = {}
+        self.studio: dict[str, dict] = {}      # Studio items kept for the session: kind → {result, steps, topic}
+        self.memory: list[dict] = []           # session memory: {turn, question, answer, vec} per exchange
         self.lock = asyncio.Lock()
         self.tokens_used = 0
 
@@ -166,6 +182,8 @@ class Session:
         self.history.clear()
         self.wiki = Wiki()
         self.cache.clear()
+        self.studio.clear()
+        self.memory.clear()
 
 
 class SessionFull(Exception):
@@ -193,6 +211,13 @@ class SessionStore:
             self.delete(sid)
             return None
         s.touch()
+        return s
+
+    def peek(self, sid: str) -> Session | None:
+        """Look a session up without counting it as activity (does not reset the idle timer)."""
+        s = self._sessions.get(sid)
+        if s is None or s.expires_in() == 0:
+            return None
         return s
 
     def delete(self, sid: str) -> bool:

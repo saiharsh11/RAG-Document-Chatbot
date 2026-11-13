@@ -119,7 +119,10 @@ If the documents say nothing about the concept, reply {"content": ""}."""
 
 GROUND_SYSTEM = """You fact-check a wiki page against the source passages it cites.
 Delete every sentence or bullet that the sources do not explicitly support (including generic
-background or "best practice" statements). Keep supported text and its [S#] citations unchanged.
+background or "best practice" statements). Check every number, date and comparison against the
+sources: if a sentence states a value or a "previous"/"up from" figure the sources don't give, delete
+that part. Also delete stated reasons or goals ("this aims to…") that no source mentions.
+Keep supported text and its [S#] citations unchanged.
 Keep Markdown structure and [[links]]. Reply with JSON only: {"content": "<cleaned page>", "removed": <number removed>}"""
 
 
@@ -229,7 +232,9 @@ STUDIO_FORMATS = {
 STUDIO_SYSTEM = """You are the Librarian agent creating study material from the user's documents.
 First research: call search_documents several times to cover the topic broadly (different sub-topics,
 each document if several exist), and read_source when a passage is cut off. Then produce {what}.
-Every fact must come from the sources and carry its source ids. Reply with JSON only, in this shape:
+Every fact must come from the sources and carry its source ids. Never add reasons, motivations, benefits,
+previous values or comparisons unless a source states them; copy numbers and dates exactly.
+Reply with JSON only, in this shape:
 {shape}"""
 
 

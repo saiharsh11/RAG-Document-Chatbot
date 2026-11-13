@@ -49,6 +49,7 @@ class State(TypedDict, total=False):
     focus: list[str]
     answer: str
     notice: str
+    recalled: list            # session memory: earlier exchanges related to this question
 
 
 def _run(config) -> Run:
@@ -58,6 +59,40 @@ def _run(config) -> Run:
 def _history(run: Run, turns: int = 6) -> str:
     h = run.session.history[-turns:]
     return "\n".join(f"{t.role}: {t.content[:400]}" for t in h)
+
+
+async def _recall(run: Run, *questions: str, known: list[dict] | None = None) -> list[dict]:
+    """Session memory: earlier exchanges related to this question (none if nothing is close).
+    Called with the raw question, and again with the planner's standalone rewrite, because vague
+    follow-ups ("why did you give me those?") only match once the rewrite names the topic."""
+    from app.retrieval import models
+    from app.session import recall
+
+    s = run.session
+    if not s.memory:
+        return known or []
+    have = {m["question"] for m in known or []}
+    new = []
+    for q in dict.fromkeys(q for q in questions if q):
+        for m in recall(s.memory, await models.embed_query(q), len(s.history)):
+            if m["question"] not in have:
+                have.add(m["question"]); new.append({"question": m["question"], "answer": m["answer"]})
+    if new:
+        run.step("Memory", "recalled", f"{len(new)} earlier exchange(s): " + " · ".join(f'"{m["question"][:50]}"' for m in new))
+    return (known or []) + new
+
+
+def _memory_block(state: State, run: Run, outline: bool = True) -> str:
+    """Session memory for a prompt: a short list of earlier questions (planner and direct answers only)
+    plus any recalled earlier exchanges. Empty for short conversations, so it usually costs nothing."""
+    h = run.session.history
+    parts = []
+    older = [t.content for t in h[:-6] if t.role == "user"]     # questions no longer in the recent window
+    if outline and older:
+        parts.append("Earlier questions in this session (oldest first):\n" + "\n".join(f"{i + 1}. {q[:90]}" for i, q in enumerate(older[-10:])))
+    for m in state.get("recalled") or []:
+        parts.append(f"Earlier in this conversation — user: {m['question']}\nassistant: {m['answer']}")
+    return "\n\n".join(parts)
 
 
 # ── nodes ───────────────────────────────────────────────────────────────────
@@ -79,7 +114,8 @@ PLAN_SYSTEM = """You route questions for a document assistant. Reply with JSON o
  "documents": ["<exact names of documents the question explicitly restricts to, e.g. 'the handbook' → its file name; [] if none>"]}
 
 Routes:
-- direct: greetings, thanks, questions about what you can do, or general questions that need no documents.
+- direct: greetings, thanks, questions about what you can do, questions about this conversation itself
+  (e.g. "what did I ask earlier?", answered from session memory), or general questions that need no documents.
 - clarify: the question is too ambiguous to search for (e.g. "what about it?" with no context).
 - wiki: the user asks about the wiki, an overview of all documents, or how concepts relate across documents.
 - retrieve: a focused factual question answerable from a few passages.
@@ -90,8 +126,10 @@ async def plan(state: State, config) -> State:
     run = _run(config)
     s = run.session
     docs = ", ".join(d.name for d in s.docs.values()) or "(none uploaded)"
-    msg = (f"Documents: {docs}\nWiki: {s.wiki.status}\nConversation so far:\n{_history(run) or '(none)'}\n\n"
-           f"Question: {state['question']}")
+    recalled = await _recall(run, state["question"])
+    memory = _memory_block({"recalled": recalled}, run)
+    msg = (f"Documents: {docs}\nWiki: {s.wiki.status}\n" + (f"Session memory:\n{memory}\n\n" if memory else "")
+           + f"Conversation so far:\n{_history(run) or '(none)'}\n\nQuestion: {state['question']}")
     model = None
     try:
         r = await llm.chat("fast", [{"role": "system", "content": PLAN_SYSTEM}, {"role": "user", "content": msg}],
@@ -101,6 +139,8 @@ async def plan(state: State, config) -> State:
         p = {"standalone": state["question"], "route": "retrieve", "subqueries": []}
     route = p.get("route", "retrieve")
     standalone = (p.get("standalone") or state["question"]).strip()
+    if standalone != state["question"]:          # the rewrite names the topic: recall with it too
+        recalled = await _recall(run, standalone, known=recalled)
 
     # Deterministic overrides: the model proposes, code disposes.
     mode = state.get("mode", "auto")
@@ -126,6 +166,7 @@ async def plan(state: State, config) -> State:
     if targets and len(targets) < len(s.docs):
         run.step("Orchestrator", "scoped", "searching only: " + ", ".join(d.name for d in s.docs.values() if d.doc_id in targets))
     out: State = {"route": route, "standalone": standalone, "subqueries": (p.get("subqueries") or [])[:3], "rounds": 0,
+                  "recalled": recalled,
                   "doc_ids": targets if 0 < len(targets) < len(s.docs) else []}
     if route == "clarify":
         out["answer"] = p.get("clarify") or "Could you say a bit more about what you're looking for?"
@@ -141,6 +182,9 @@ tell them to upload a file first. Do not invent document content."""
 async def answer_direct(state: State, config) -> State:
     run = _run(config)
     msgs = [{"role": "system", "content": DIRECT_SYSTEM}]
+    memory = _memory_block(state, run)
+    if memory:
+        msgs.append({"role": "system", "content": f"Session memory (earlier in this conversation):\n{memory}"})
     msgs += [{"role": t.role, "content": t.content} for t in run.session.history[-4:]]
     msgs.append({"role": "user", "content": state["question"]})
     text = await _stream(run, "fast", msgs, max_tokens=500)
@@ -225,6 +269,9 @@ async def write(state: State, config) -> State:
     budget = 1100 if state.get("route") != "cag" else 4000
     context = format_evidence(evs, max_chars=budget) if evs else "(no relevant passages were found)"
     msgs = [{"role": "system", "content": WRITER_SYSTEM}]
+    memory = _memory_block(state, run, outline=False)
+    if memory:
+        msgs.append({"role": "system", "content": f"Session memory (earlier in this conversation, for context only; cite sources, not memory):\n{memory}"})
     msgs += [{"role": t.role, "content": t.content[:600]} for t in run.session.history[-4:]]
     extra = ""
     if state.get("verdict", {}).get("verdict") == "revise":

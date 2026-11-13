@@ -8,6 +8,7 @@ breaker, and exact token accounting for traces and the spend guard.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import json
 import logging
 import re
@@ -21,6 +22,19 @@ import httpx
 from app.config import CHAINS, OPENROUTER_FALLBACKS, OPENROUTER_PRIVACY, ModelSpec, settings
 
 log = logging.getLogger("llm")
+
+# Set per request so a wait for free-tier quota shows up in the user's agent trail
+# instead of looking like the app froze. Context variables follow async tasks.
+on_quota_wait: contextvars.ContextVar = contextvars.ContextVar("on_quota_wait", default=None)
+
+
+def _announce_wait(seconds: float) -> None:
+    cb = on_quota_wait.get()
+    if cb and seconds >= 2:
+        try:
+            cb(seconds)
+        except Exception:  # telemetry must never break a request
+            pass
 
 
 class LLMUnavailable(Exception):
@@ -155,6 +169,7 @@ class LLMClient:
                 if attempt == 3 or wait is None or wait > 45:
                     raise
                 log.info("all models throttled for %s; waiting %.1fs for quota", job, wait)
+                _announce_wait(wait)
                 await asyncio.sleep(wait + 0.5)
         raise LLMUnavailable("unreachable")
 
@@ -251,6 +266,7 @@ class LLMClient:
                 if got or attempt == 3 or wait is None or wait > 45:
                     raise
                 log.info("all models throttled for %s stream; waiting %.1fs", job, wait)
+                _announce_wait(wait)
                 await asyncio.sleep(wait + 0.5)
 
     async def _stream_once(self, job, messages, *, max_tokens, temperature, prefer, usage, on_model):

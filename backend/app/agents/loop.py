@@ -34,6 +34,7 @@ async def run_tool_agent(
     finish_prompt: str,
     max_tokens: int = 900,
 ) -> str:
+    run.watch_quota()   # agents may run in another task (A2A), so register the trail hook here too
     messages: list[dict] = [{"role": "system", "content": system}, {"role": "user", "content": task}]
     for step in range(max_steps):
         res = await llm.chat(job, messages, tools=belt.specs, max_tokens=max_tokens,

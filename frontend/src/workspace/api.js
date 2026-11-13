@@ -44,6 +44,7 @@ export const api = {
   createSession: () => json("/sessions", { method: "POST" }),
   getSession: (sid) => json(`/sessions/${sid}`),
   endSession: (sid) => json(`/sessions/${sid}`, { method: "DELETE" }),
+  extendSession: (sid) => json(`/sessions/${sid}/extend`, { method: "POST" }),
   models: () => json("/models"),
   agents: () => json("/agents"),
 
@@ -76,6 +77,7 @@ export const api = {
     });
     return readSSE(res, onEvent);
   },
+  studioItems: (sid) => json(`/sessions/${sid}/studio`),
   speak: async (sid, text) => {
     const res = await fetch(`${API_URL}/sessions/${sid}/speak`, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }),

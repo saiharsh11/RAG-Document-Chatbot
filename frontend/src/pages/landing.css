@@ -77,7 +77,7 @@
   vertical-align: 2px; background: var(--accent); color: var(--accent-ink); font-family: var(--mono); font-size: 10px; font-weight: 500; }
 
 /* ─── Wiki (product window) ── */
-.mg-wiki { overflow: hidden; background: radial-gradient(120% 70% at 80% 100%, #1d1410 0%, var(--ink) 60%); }
+.mg-wiki { overflow: hidden; background: radial-gradient(120% 70% at 80% 100%, rgba(29, 20, 16, .75) 0%, transparent 60%); }
 .mg-wiki .mg-wrap { position: relative; z-index: 1; }
 .mg-wiki.is-in .mg-wiki-head { display: grid; gap: 24px; margin-bottom: 72px; }
 @media (min-width: 1000px) { .mg-wiki-head { grid-template-columns: 1.2fr 1fr; align-items: end; } .mg-wiki-head .mg-lede { margin: 0; } }
@@ -163,7 +163,7 @@
 .mg-feat-card p { margin: 12px 0 0; font-size: 15.5px; line-height: 1.6; color: var(--paper-dim); }
 
 /* ─── Privacy ── */
-.mg-privacy { background: var(--ink-2); }
+.mg-privacy { background: rgba(18, 17, 16, .5); }
 .mg-timeline { margin-top: 80px; display: grid; grid-template-columns: 1fr; }
 @media (min-width: 900px) { .mg-timeline { grid-template-columns: repeat(4, 1fr); } }
 .mg-tl { position: relative; padding: 28px 28px 32px 0; border-top: 1px solid var(--line-strong); }
@@ -356,3 +356,15 @@
 .mg-foot-brand .mg-brand-word { font-size: 26px; }
 @media (max-width: 520px) { .mg-brand-word { font-size: 15px; } }
 @media (max-width: 400px) { .mg-nav .mg-brand-word { display: none; } }
+
+/* ─── Background dot shape (fixed, behind every section; morphs with scroll) ── */
+.mg-bgfx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+/* the logo assembling from dots, beside the closing line (wide screens only) */
+.mg-close-logo { display: none; }
+@media (min-width: 1100px) {
+  .mg-close-logo { display: block; position: absolute; right: max(2vw, calc((100vw - 1320px) / 2)); top: 50%; width: 380px; height: 420px;
+    transform: translateY(-50%); pointer-events: none; z-index: 1; }
+  .mg-close-logo canvas { width: 100%; height: 100%; display: block; }
+  .mg-close h2 { max-width: 64%; }
+}
+.mg > main { position: relative; z-index: 1; }

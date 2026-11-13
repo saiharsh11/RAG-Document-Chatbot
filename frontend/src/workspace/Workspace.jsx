@@ -10,6 +10,7 @@ import Markdown from "./Markdown";
 import Trail from "./Trail";
 import WikiPanel from "./WikiPanel";
 import StudioPanel from "./StudioPanel";
+import DotField from "../components/DotField";
 import "./workspace.css";
 
 const PdfViewer = lazy(() => import("./PdfViewer"));
@@ -90,13 +91,14 @@ export default function Workspace() {
   });
   const [models, setModels] = useState([]);
   const [fatal, setFatal] = useState("");
+  const [warnDismissed, setWarnDismissed] = useState(false);   // "Let it end" on the one-minute warning
   const files = useRef(new Map()); // doc_id → File (kept in the browser only)
 
   // ── session lifecycle ────────────────────────────────────────────────────
   const startSession = useCallback(async () => {
     const s = await api.createSession();
     try { sessionStorage.setItem(SID_KEY, s.session_id); } catch { /* storage blocked */ }
-    setSid(s.session_id); setExpires(s.expires_in);
+    setSid(s.session_id); setExpires(s.expires_in); setWarnDismissed(false);
     setDocs([]); setMessages([]); setWiki(null); setSelected(null); setViewer(null); setUploads([]);
     files.current = new Map();
   }, []);
@@ -129,8 +131,13 @@ export default function Workspace() {
 
   const touch = useCallback(async () => {
     if (!sid) return;
-    try { const s = await api.getSession(sid); setExpires(s.expires_in); } catch (e) { if (e.status === 404) startSession(); }
+    try { const s = await api.getSession(sid); setExpires(s.expires_in); setWarnDismissed(false); } catch (e) { if (e.status === 404) startSession(); }
   }, [sid, startSession]);
+
+  const extendSession = async () => {
+    try { const s = await api.extendSession(sid); setExpires(s.expires_in); setWarnDismissed(false); }
+    catch { setExpires(0); }   // already gone: the "session ended" screen takes over
+  };
 
   const endSession = async () => {
     if (sid) await api.endSession(sid).catch(() => {});
@@ -214,6 +221,8 @@ export default function Workspace() {
   }
 
   const hasRight = tab === "chat" || !!viewer;   // wiki and studio use the full width unless a source is open
+  const warn = !!sid && expires > 0 && expires <= 60 && !warnDismissed;
+  const ended = !!sid && expires === 0;
 
   return (
     <div className="ws">
@@ -279,6 +288,31 @@ export default function Workspace() {
           )}
         </aside>
       </div>
+
+      {(warn || ended) && (
+        <div className="ws-modal-back">
+          <div className="ws-modal" role="alertdialog" aria-modal="true" aria-labelledby="ws-modal-title">
+            {ended ? (
+              <>
+                <h3 id="ws-modal-title">Session ended</h3>
+                <p>Your documents, chat, wiki and study items were wiped from the server. Nothing was kept.</p>
+                <div className="ws-modal-actions">
+                  <button type="button" className="ws-btn ws-btn-accent" autoFocus onClick={() => { try { sessionStorage.removeItem(SID_KEY); } catch { /* ignore */ } startSession(); }}>Start a new session</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 id="ws-modal-title">Your session ends in {fmtTime(expires)}</h3>
+                <p>When it ends, everything you uploaded and created here is wiped. Need more time?</p>
+                <div className="ws-modal-actions">
+                  <button type="button" className="ws-btn ws-btn-ghost" onClick={() => setWarnDismissed(true)}>Let it end</button>
+                  <button type="button" className="ws-btn ws-btn-accent" autoFocus onClick={extendSession}>Extend by 5 minutes</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -389,6 +423,7 @@ function Chat({ messages, selected, setSelected, send, busy, stop, docs, models,
 
   return (
     <div className="chat">
+      {!messages.length && <DotField className="chat-bgfx" />}
       <div className="chat-scroll">
         {!messages.length && (
           <div className="chat-intro">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpenCheck, Brain, Layers, ListChecks, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import Markdown from "./Markdown";
 import Trail from "./Trail";
@@ -124,23 +124,47 @@ function MindMap({ result, onCite }) {
 export default function StudioPanel({ sid, api, docs, onCite }) {
   const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(null);
-  const [steps, setSteps] = useState([]);
-  const [result, setResult] = useState(null);
+  const [liveSteps, setLiveSteps] = useState([]);
+  const [items, setItems] = useState({});        // kind → { result, steps, topic }, kept for the session
+  const [current, setCurrent] = useState(null);
   const [error, setError] = useState("");
+
+  // Items made earlier in this session live on the server (in memory), so they survive
+  // switching tabs and page refreshes, and are wiped with the session.
+  useEffect(() => {
+    if (!sid) return;
+    api.studioItems(sid).then((d) => {
+      const saved = d.items || {};
+      setItems((prev) => ({ ...saved, ...prev }));
+      setCurrent((c) => c || Object.keys(saved)[0] || null);
+    }).catch(() => {});
+  }, [api, sid]);
 
   if (!docs.length) return <Empty icon={Sparkles} title="No documents yet" text="Upload files, and the Librarian agent will research them to build quizzes, flashcards, mind maps and study guides." />;
 
   const run = async (kind) => {
-    setBusy(kind); setSteps([]); setResult(null); setError("");
+    setBusy(kind); setCurrent(kind); setLiveSteps([]); setError("");
+    const steps = [];
     try {
       await api.studio(sid, { kind, topic }, (ev) => {
-        if (ev.type === "step") setSteps((s) => [...s, ev]);
-        if (ev.type === "final") setResult(ev.result);
+        if (ev.type === "step") { steps.push(ev); setLiveSteps([...steps]); }
+        if (ev.type === "final") setItems((prev) => ({ ...prev, [kind]: { result: ev.result, steps, topic } }));
         if (ev.type === "error") setError(ev.message);
       });
     } catch (e) { setError(e.message); }
     setBusy(null);
   };
+
+  // Show a finished item straight away; only build it if it doesn't exist yet (or the focus changed).
+  const open = (kind) => {
+    const have = items[kind];
+    if (have && (have.topic || "") === topic) { setCurrent(kind); setError(""); return; }
+    run(kind);
+  };
+
+  const item = current ? items[current] : null;
+  const result = item?.result;
+  const building = busy && busy === current;
 
   return (
     <div className="st">
@@ -148,24 +172,35 @@ export default function StudioPanel({ sid, api, docs, onCite }) {
         <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Optional focus, e.g. “expense rules” (default: everything)" aria-label="Studio topic" />
         <div className="st-kinds">
           {KINDS.map((k) => (
-            <button key={k.id} type="button" className={`st-kind ${result?.kind === k.id ? "is-on" : ""}`} onClick={() => run(k.id)} disabled={!!busy}>
-              {busy === k.id ? <Loader2 size={18} className="spin" /> : <k.icon size={18} />}
-              <b>{k.label}</b><span>{k.text}</span>
-            </button>
+            <div key={k.id} className="st-kind-wrap">
+              <button type="button" className={`st-kind ${current === k.id ? "is-on" : ""}`} onClick={() => open(k.id)} disabled={!!busy}>
+                {busy === k.id ? <Loader2 size={18} className="spin" /> : <k.icon size={18} />}
+                <b>{k.label}{items[k.id] && <span className="st-ready" title="Made in this session">ready</span>}</b><span>{k.text}</span>
+              </button>
+              {items[k.id] && (
+                <button type="button" className="st-rebuild" onClick={() => run(k.id)} disabled={!!busy}
+                  title={`Rebuild the ${k.label.toLowerCase()}`} aria-label={`Rebuild the ${k.label.toLowerCase()}`}>
+                  <RotateCcw size={13} />
+                </button>
+              )}
+            </div>
           ))}
         </div>
-        <p className="ws-fine">Each item is researched by the Librarian agent with its own searches, and every fact links to its source.</p>
+        <p className="ws-fine">Each item is researched by the Librarian agent with its own searches, and every fact links to its source. Items stay here until the session ends.</p>
       </div>
       {error && <p className="ws-error">{error}</p>}
-      {(busy || (steps.length > 0 && !result)) && <Trail steps={steps} live={!!busy} />}
-      {result && (
+      {building && <Trail steps={liveSteps} live />}
+      {result && !building && (
         <div className="st-result">
           <div className="st-result-head">
             <h3>{result.title}</h3>
-            <details><summary>How this was made ({steps.length} steps)</summary><Trail steps={steps} compact /></details>
+            <div className="st-result-tools">
+              <details><summary>How this was made ({item.steps?.length || 0} steps)</summary><Trail steps={item.steps || []} compact /></details>
+              <button type="button" className="ws-link" onClick={() => run(current)} disabled={!!busy}><RotateCcw size={13} /> Regenerate</button>
+            </div>
           </div>
-          {result.kind === "quiz" && <Quiz result={result} onCite={onCite} />}
-          {result.kind === "flashcards" && <Flashcards result={result} onCite={onCite} />}
+          {result.kind === "quiz" && <Quiz key={result.title} result={result} onCite={onCite} />}
+          {result.kind === "flashcards" && <Flashcards key={result.title} result={result} onCite={onCite} />}
           {result.kind === "mindmap" && <MindMap result={result} onCite={onCite} />}
           {result.kind === "study_guide" && (
             <div className="st-guide"><Markdown text={result.markdown} citations={result.citations}
